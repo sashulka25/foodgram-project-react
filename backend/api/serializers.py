@@ -141,7 +141,9 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class RecipeCreateSerializer(serializers.ModelSerializer):
-    tags = serializers.PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
+    tags = serializers.PrimaryKeyRelatedField(
+        queryset=Tag.objects.all(),
+        many=True)
     author = CustomUserSerializer(read_only=True)
     ingredients = IngredentRecipeSerializer(many=True)
     name = serializers.CharField()

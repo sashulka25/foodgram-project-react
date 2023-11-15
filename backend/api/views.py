@@ -141,7 +141,8 @@ class RecipeViewSet(ModelViewSet):
             content += f'- {ingredient}: {amount}\n'
 
         response = HttpResponse(content, content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="shopping_cart.txt"'
+        response['Content-Disposition'] = ('attachment; '
+                                           'filename="shopping_cart.txt"')
 
         return response
 
@@ -226,8 +227,9 @@ class CustomUserViewSet(GenericViewSet):
 
         elif request.method == 'DELETE':
             if not subscription_exists:
-                return Response({'message': 'Вы не подписаны на данного автора'},
-                                status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {'message': 'Вы не подписаны на данного автора'},
+                    status=status.HTTP_400_BAD_REQUEST)
 
             Subscription.objects.filter(
                 user=user, author=author).delete()
