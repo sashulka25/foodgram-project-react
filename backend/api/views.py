@@ -53,67 +53,45 @@ class RecipeViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save()
 
+    def post_delete(self, request, pk, model):
+        recipe = self.get_object()
+        model_filter = model.objects.filter(
+            user=request.user, recipe=recipe)
+
+        if request.method == 'POST':
+            if model_filter.exists():
+                return Response(
+                    {'message': 'Рецепт уже был добавлен'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            model.objects.create(user=request.user, recipe=recipe)
+            return Response(
+                {'message': 'Рецепт добавлен'},
+                status=status.HTTP_200_OK
+            )
+
+        if model_filter.exists():
+            model_filter.delete()
+            return Response(
+                {'message': 'Рецепт удален'},
+                status=status.HTTP_200_OK
+            )
+        return Response(
+            {'message': 'Данный рецепт отсутствует'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     @action(detail=True,
             methods=['post', 'delete'],
             permission_classes=[IsAuthorOrAdminOrReadOnly,])
     def favorite(self, request, pk=None):
-        recipe = self.get_object()
-
-        if request.method == 'POST':
-            if not Favorite.objects.filter(
-                    user=request.user, recipe=recipe).exists():
-                Favorite.objects.create(user=request.user, recipe=recipe)
-                return Response({'message': 'Рецепт добавлен в избранное'},
-                                status=status.HTTP_200_OK)
-            return Response({'message': 'Рецепт уже в избранном'},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        if request.method == 'DELETE':
-            if Favorite.objects.filter(
-                    user=request.user, recipe=recipe).exists():
-                Favorite.objects.filter(
-                    user=request.user, recipe=recipe).delete()
-                return Response({'message': 'Рецепт удален из избранного'},
-                                status=status.HTTP_200_OK)
-            return Response({'message': 'Рецепта нет в избранном'},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
+        return self.post_delete(request, pk, Favorite)
+    
     @action(detail=True,
             methods=['post', 'delete'],
             permission_classes=[IsAuthenticated])
     def shopping_cart(self, request, pk=None):
-        recipe = self.get_object()
-
-        if request.method == 'POST':
-            if ShoppingCart.objects.filter(
-                    user=request.user, recipe=recipe).exists():
-                return Response(
-                    {'message': 'Рецепт уже добавлен в список покупок'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            ShoppingCart.objects.create(user=request.user, recipe=recipe)
-            return Response(
-                {'message': 'Рецепт добавлен в список покупок'},
-                status=status.HTTP_200_OK
-            )
-
-        if request.method == 'DELETE':
-            if ShoppingCart.objects.filter(
-                    user=request.user, recipe=recipe).exists():
-                ShoppingCart.objects.filter(
-                    user=request.user, recipe=recipe).delete()
-                return Response(
-                    {'message': 'Рецепт удален из списка покупок'},
-                    status=status.HTTP_200_OK
-                )
-            return Response(
-                {'message': 'Рецепта нет в списке покупок'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return self.post_delete(request, pk, ShoppingCart)
 
     @action(detail=False,
             methods=['get'],
