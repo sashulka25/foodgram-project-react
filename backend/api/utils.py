@@ -1,10 +1,10 @@
-from recipes.models import RecipeIngredient
+from recipes.models import IngredientRecipe
 
 
 def process_shopping_cart_items(shopping_cart_items):
     buy_list = {}
     for item in shopping_cart_items:
-        ingredients = RecipeIngredient.objects.filter(recipe=item.recipe)
+        ingredients = IngredientRecipe.objects.filter(recipe=item.recipe)
         for ingredient in ingredients:
             key = (
                 f'{ingredient.ingredient.name} '
