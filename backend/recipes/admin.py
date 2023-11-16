@@ -31,21 +31,10 @@ class TagAdmin(admin.ModelAdmin):
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     inlines = (RecipeInline, RecipeTagsInLine, )
-    list_display = ('id', 'name', 'author', 'display_ingredients',
-                    'cooking_time', 'display_favorite_count')
+    list_display = ('id', 'name', 'author',
+                    'cooking_time')
     list_filter = ('name', 'author', 'tags__name',)
     search_fields = ('name', 'author__username', 'author__email')
-    readonly_fields = ('display_favorite_count',)
-
-    @admin.display(description='Число добавлений в избранное')
-    def display_favorite_count(self, obj):
-        return obj.favorites.count()
-
-    @admin.display(description='Ингредиенты')
-    def display_ingredients(self, obj):
-        ingredients = obj.ingredients.all()
-        ingredient_names = [ingredient.name for ingredient in ingredients]
-        return ', '.join(ingredient_names)
 
 
 @admin.register(IngredientRecipe)

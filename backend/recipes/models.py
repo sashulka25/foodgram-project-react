@@ -141,6 +141,12 @@ class IngredientRecipe(models.Model):
     class Meta:
         verbose_name = 'Ингредиент рецепта'
         verbose_name_plural = 'Ингредиенты рецепта'
+        constraints = (
+            models.UniqueConstraint(
+                fields=('recipe', 'ingredient'),
+                name='unique_recipe_ingredient'
+            ),
+        )
 
     def __str__(self):
         return f'Рецепт {self.recipe} содержит ингредиент {self.ingredient}'
@@ -161,6 +167,12 @@ class TagRecipe(models.Model):
     class Meta:
         verbose_name = 'Тег рецепта'
         verbose_name_plural = 'Теги рецепта'
+        constraints = (
+            models.UniqueConstraint(
+                fields=('recipe', 'tag'),
+                name='unique_recipe_tag'
+            ),
+        )
 
     def __str__(self):
         return f'Рецепт {self.recipe} содержит тег {self.tag}'

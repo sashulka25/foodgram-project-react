@@ -1,13 +1,14 @@
+from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
+from djoser.views import UserViewSet
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.viewsets import (GenericViewSet, ModelViewSet,
-                                     ReadOnlyModelViewSet)
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.viewsets import (ModelViewSet, ReadOnlyModelViewSet)
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from api.filters import IngredientFilter, RecipeFilter
@@ -83,10 +84,10 @@ class RecipeViewSet(ModelViewSet):
 
     @action(detail=True,
             methods=['post', 'delete'],
-            permission_classes=[IsAuthorOrAdminOrReadOnly,])
+            permission_classes=[IsAuthenticated])
     def favorite(self, request, pk=None):
         return self.post_delete(request, pk, Favorite)
-    
+
     @action(detail=True,
             methods=['post', 'delete'],
             permission_classes=[IsAuthenticated])
@@ -98,42 +99,32 @@ class RecipeViewSet(ModelViewSet):
             permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
         shopping_cart_items = ShoppingCart.objects.filter(user=request.user)
-        buy_list = {}
-        for item in shopping_cart_items:
-            ingredients = IngredientRecipe.objects.filter(recipe=item.recipe)
-            for ingredient in ingredients:
-                key = (
-                    f'{ingredient.ingredient.name} '
-                    f'({ingredient.ingredient.measurement_unit})'
-                )
-                if key in buy_list:
-                    buy_list[key] += ingredient.amount
-                else:
-                    buy_list[key] = ingredient.amount
-
+        recipes = [item.recipe.id for item in shopping_cart_items]
+        ingredients = IngredientRecipe.objects.filter(
+            recipe__in=recipes).values(
+                'ingredient__name',
+                'ingredient__measurement_unit').annotate(
+                    amount=Sum('amount'))
         today = timezone.localdate()
         content = ('Список покупок:\n\n'
                    f'Дата: {today:%Y-%m-%d}\n\n')
-        for ingredient, amount in buy_list.items():
-            content += f'- {ingredient}: {amount}\n'
-
+        for ingredient in ingredients:
+            content += '\n'.join([
+                f'- {ingredient["ingredient__name"]} '
+                f'({ingredient["ingredient__measurement_unit"]})'
+                f' : {ingredient["amount"]}\n'
+            ])
         response = HttpResponse(content, content_type='text/plain')
         response['Content-Disposition'] = ('attachment; '
                                            'filename="shopping_cart.txt"')
-
         return response
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        author_id = self.request.query_params.get('author')
-        if author_id:
-            queryset = queryset.filter(author_id=author_id)
-        return queryset
 
-
-class CustomUserViewSet(GenericViewSet):
+class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
     pagination_class = CustomPagination
+    serializer_class = CustomUserSerializer
+    permission_classes = (AllowAny,)
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -154,35 +145,25 @@ class CustomUserViewSet(GenericViewSet):
         serializer = self.get_serializer(paginated_queryset, many=True)
         return self.get_paginated_response(serializer.data)
 
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        if not request.user.is_authenticated:
-            raise PermissionDenied(
-                detail='Пользователь не авторизован',
-                code=status.HTTP_401_UNAUTHORIZED)
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
-
     @action(detail=False,
             methods=['get'],
             url_path='me',
             url_name='me')
     def my_profile(self, request):
-        if request.user.is_authenticated:
-            serializer = self.get_serializer(request.user)
-            return Response(serializer.data)
-
-        return Response({'detail': 'Пользователь не авторизован'}, status=401)
+        if not request.user.is_authenticated:
+            return Response(
+                {'detail': 'Пользователь не авторизован'}, status=401)
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
 
     @action(
         detail=True,
         methods=['post', 'delete'],
-        serializer_class=SubscriptionSerializer,
         permission_classes=[IsAuthenticated]
     )
-    def subscribe(self, request, pk):
+    def subscribe(self, request, id):
         user = request.user
-        author = get_object_or_404(User, pk=pk)
+        author = get_object_or_404(User, id=id)
 
         if user == author:
             return Response({'message': 'Подписка на себя невозможна'},
@@ -202,18 +183,14 @@ class CustomUserViewSet(GenericViewSet):
                 author, context={'request': request})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        elif request.method == 'DELETE':
-            if not subscription_exists:
-                return Response(
-                    {'message': 'Вы не подписаны на данного автора'},
-                    status=status.HTTP_400_BAD_REQUEST)
+        if not subscription_exists:
+            return Response(
+                {'message': 'Вы не подписаны на данного автора'},
+                status=status.HTTP_400_BAD_REQUEST)
 
-            Subscription.objects.filter(
-                user=user, author=author).delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
-        return Response({'message': 'Метод не разрешен для данного запроса'},
-                        status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        Subscription.objects.filter(
+            user=user, author=author).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['post'])
     def set_password(self, request):
