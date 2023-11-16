@@ -17,7 +17,7 @@ from api.serializers import (CustomUserCreateSerializer, CustomUserSerializer,
                              RecipeSerializer, SubscriptionSerializer,
                              TagSerializer)
 from api.pagination import CustomPagination
-from api.permissions import IsAuthorOrAdminOrReadOnly, IsAuthorOrAuthenticated
+from api.permissions import IsAuthorOrAdminOrReadOnly
 from recipes.models import (Ingredient, IngredientRecipe, Favorite, Recipe,
                             ShoppingCart, Tag)
 from user.models import Subscription, User
@@ -56,7 +56,7 @@ class RecipeViewSet(ModelViewSet):
 
     @action(detail=True,
             methods=['post', 'delete'],
-            permission_classes=[IsAuthorOrAuthenticated])
+            permission_classes=[IsAuthorOrAdminOrReadOnly,])
     def favorite(self, request, pk=None):
         recipe = self.get_object()
 
