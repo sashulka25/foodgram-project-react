@@ -1,8 +1,7 @@
-from datetime import datetime
-
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -134,7 +133,7 @@ class RecipeViewSet(ModelViewSet):
                 else:
                     buy_list[key] = ingredient.amount
 
-        today = datetime.today()
+        today = timezone.localdate()
         content = ('Список покупок:\n\n'
                    f'Дата: {today:%Y-%m-%d}\n\n')
         for ingredient, amount in buy_list.items():
