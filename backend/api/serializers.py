@@ -110,7 +110,11 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
 class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     author = CustomUserSerializer(read_only=True)
-    ingredients = serializers.SerializerMethodField()
+    #ingredients = serializers.SerializerMethodField()
+    ingredients = IngredentRecipeSerializer(many=True,
+                                            read_only=True
+                                            #source='amount_ingredient'
+                                        )
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
@@ -122,10 +126,10 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('author',)
 
-    def get_ingredients(self, obj):
-        ingredients = IngredientRecipe.objects.filter(recipe=obj)
-        serializer = IngredentRecipeSerializer(ingredients, many=True)
-        return serializer.data
+    #def get_ingredients(self, obj):
+    #    ingredients = IngredientRecipe.objects.filter(recipe=obj)
+    #    serializer = IngredentRecipeSerializer(ingredients, many=True)
+    #    return serializer.data
 
     def get_is_favorited(self, obj):
         user = self.context.get('request').user
@@ -171,7 +175,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 'Необходимо добавить хотя бы один ингредиент!')
         ingredients_set = set()
         for ingredient_data in value:
-            print(ingredient_data)
             ingredient_id = ingredient_data['id']
             if ingredient_id in ingredients_set:
                 raise ValidationError('Ингрединеты не могут повторяться!')
@@ -188,9 +191,9 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def create_ingredients(self, recipe, ingredients_data):
         ingredients = []
         for ingredient_data in ingredients_data:
-            ingredient_id = ingredient_data['id']
+            #ingredient_id = ingredient_data['id']
             amount = ingredient_data['amount']
-            ingredient_obj = get_object_or_404(Ingredient, pk=ingredient_id)
+            ingredient_obj = get_object_or_404(Ingredient, pk=ingredient_data['id'])
             ingredients.append(IngredientRecipe(
                 recipe=recipe,
                 ingredient=ingredient_obj,
