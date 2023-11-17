@@ -98,13 +98,12 @@ class RecipeViewSet(ModelViewSet):
             methods=['get'],
             permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
-        shopping_cart_items = ShoppingCart.objects.filter(user=request.user)
-        recipes = [item.recipe.id for item in shopping_cart_items]
+        recipes = ShoppingCart.objects.filter(user=request.user).values('recipe__id')
         ingredients = IngredientRecipe.objects.filter(
             recipe__in=recipes).values(
                 'ingredient__name',
                 'ingredient__measurement_unit').annotate(
-                    amount=Sum('amount'))
+                    quantity=Sum('amount'))
         today = timezone.localdate()
         content = ('Список покупок:\n\n'
                    f'Дата: {today:%Y-%m-%d}\n\n')
@@ -112,7 +111,7 @@ class RecipeViewSet(ModelViewSet):
             content += '\n'.join([
                 f'- {ingredient["ingredient__name"]} '
                 f'({ingredient["ingredient__measurement_unit"]})'
-                f' : {ingredient["amount"]}\n'
+                f' : {ingredient["quantity"]}\n'
             ])
         response = HttpResponse(content, content_type='text/plain')
         response['Content-Disposition'] = ('attachment; '
