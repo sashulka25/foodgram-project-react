@@ -1,5 +1,4 @@
 from django.core.validators import MinValueValidator
-from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
@@ -182,13 +181,11 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def create_ingredients(self, recipe, ingredients_data):
         ingredients = []
         for ingredient_data in ingredients_data:
+            ingredient_id = ingredient_data['id']
             amount = ingredient_data['amount']
-            ingredient_obj = get_object_or_404(
-                Ingredient,
-                pk=ingredient_data['id'])
             ingredients.append(IngredientRecipe(
                 recipe=recipe,
-                ingredient=ingredient_obj,
+                ingredient_id=ingredient_id,
                 amount=amount
             ))
         IngredientRecipe.objects.bulk_create(ingredients)
