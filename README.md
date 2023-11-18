@@ -132,8 +132,8 @@ Foodgram - веб-приложение, разработанное для удо
 8. Данные суперпользователя:
 
     ```
-    email: admin@admin.ru
-    password: admin@admin.ru
+    email: admin@yandex.ru
+    password: admin@yandex.ru
     ```
 
 ### Настройка CI/CD
