@@ -126,7 +126,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         return not user.is_anonymous and Favorite.objects.filter(
             user=user,
             recipe=obj).exists()
-    
+
     def get_ingredients(self, obj):
         ingredients = IngredientRecipe.objects.filter(recipe=obj)
         serializer = IngredentRecipeSerializer(ingredients, many=True)
