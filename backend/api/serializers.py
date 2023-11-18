@@ -109,7 +109,7 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
 class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     author = CustomUserSerializer(read_only=True)
-    ingredients = IngredentRecipeSerializer(many=True, read_only=True)
+    ingredients = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
@@ -126,6 +126,11 @@ class RecipeSerializer(serializers.ModelSerializer):
         return not user.is_anonymous and Favorite.objects.filter(
             user=user,
             recipe=obj).exists()
+    
+    def get_ingredients(self, obj):
+        ingredients = IngredientRecipe.objects.filter(recipe=obj)
+        serializer = IngredentRecipeSerializer(ingredients, many=True)
+        return serializer.data
 
     def get_is_in_shopping_cart(self, obj):
         user = self.context.get('request').user
